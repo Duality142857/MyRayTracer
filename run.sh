@@ -1,0 +1,1 @@
+./build/NewRay --width 800 --height 600 --spp 8 --raydepth 32 --ifbvh 1
