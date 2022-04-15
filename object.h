@@ -7,12 +7,20 @@ START_NAMESPACE(NewRay)
 
 struct Object
 {
+    virtual void sample(HitRecord& rec) const
+    {}
     virtual bool hit(const Ray& ray, float t0, float t1, std::optional<HitRecord>& rec) const=0;
+    virtual bool ifemit() const {return false;}
+    virtual std::optional<float> getArea() const 
+    {
+        return std::nullopt;
+    }
 };
 
 struct AABB : public Object
 {
     MyGeo::Vec3f min,max;
+    AABB(){}
     AABB(const MyGeo::Vec3f& min,const MyGeo::Vec3f& max): 
     min{min},max{max}
     {}
@@ -70,7 +78,7 @@ struct ObjList: public Object
             if(obj->hit(ray,t0,curt,rec)==true)
             {
                 hitflag=true;
-                curt=t1;           
+                curt=rec->t;           
             }
         }
         return hitflag;
@@ -80,15 +88,31 @@ struct ObjList: public Object
 struct Triangle: public Object
 {
     MyGeo::Vec3f v0,v1,v2;
+    MyGeo::Vec3f normal;
     std::shared_ptr<Material> material;
-    Triangle(const MyGeo::Vec3f& v0,const MyGeo::Vec3f& v1,const MyGeo::Vec3f& v2,std::shared_ptr<Material> material):v0{v0},v1{v1},v2{v2}
+    Triangle(const MyGeo::Vec3f& v0,const MyGeo::Vec3f& v1,const MyGeo::Vec3f& v2,const MyGeo::Vec3f& normal,std::shared_ptr<Material> material):v0{v0},v1{v1},v2{v2},normal{normal}
     ,material{material}
     {}
+    virtual bool ifemit() const {return material->ifemit();}
+
+    void sample(HitRecord& sampleRec) const override
+    {
+        float x=getRand(0.f,1.f);
+        float y=getRand(0.f,1.f);
+        float alpha=1.f-x;
+        float beta=x-x*y;
+        float gamma=1.f-alpha-beta;
+        sampleRec.position=v0*alpha+v1*beta+v2*gamma;
+        sampleRec.normal=normal;
+        sampleRec.material=material;
+        sampleRec.u=0.f;
+        sampleRec.v=0.f;
+    }
 
     virtual bool hit(const Ray& ray, float t0, float t1, std::optional<HitRecord>& rec) const override
     {
-        AABB bb=getBoundingBox();
-        if(!bb.hit(ray,t0,t1,rec)) return false;
+        // AABB bb=getBoundingBox();
+        // if(!bb.hit(ray,t0,t1,rec)) return false;
         MyGeo::Vec3f e1=v1-v0;
         MyGeo::Vec3f e2=v2-v0;
         MyGeo::Vec3f s=ray.source-v0;
@@ -106,7 +130,8 @@ struct Triangle: public Object
             }
             rec->t=t;
             rec->position=ray.at(t);
-            rec->normal=e1.cross(e1);
+            // rec->normal=e1.cross(e1);
+            rec->normal=normal;
             rec->material=material;
             rec->fixNormal(ray.direction);
             return true;
@@ -169,6 +194,7 @@ struct Sphere : Object
     float radius,radius2;
     Sphere(const MyGeo::Vec3f& center,float r,std::shared_ptr<Material> material):center{center},radius{r},radius2{r*r},material{material}
     {}
+    virtual bool ifemit() const {return material->ifemit();}
 
     virtual bool hit(const Ray& ray, float t0, float t1, std::optional<HitRecord>& rec) const override
     {

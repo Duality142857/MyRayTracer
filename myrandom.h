@@ -14,15 +14,15 @@ concept is_real=std::is_floating_point_v<T>;
 
 template<is_real T>
 static T getRand(const T & min=0.f, const T & max=1.f) 
-{
-    static thread_local std::mt19937 generator;
+{//thread_local
+    static  std::mt19937 generator;
     std::uniform_real_distribution<T> distribution(min,max);
     return distribution(generator);
 }
 template<is_int T>
 static T getRand(const T & min=0, const T & max=RAND_MAX) 
-{
-    static thread_local std::mt19937 generator;
+{//thread_local
+    static  std::mt19937 generator;
     std::uniform_int_distribution<T> distribution(min,max);
     return distribution(generator);
 }
@@ -33,6 +33,7 @@ static MyGeo::Vec<T,3> randomVec3(T min, T max)
     return MyGeo::Vec<T,3>{getRand<T>(min,max),getRand<T>(min,max),getRand<T>(min,max)};
 }
 
+//random vector in unit sphere, 长度<=1
 template<class T>
 static MyGeo::Vec<T,3> randomInUnitSphere()
 {
@@ -53,7 +54,7 @@ static MyGeo::Vec<T,3> randomUnitVector()
 template<class T>
 static MyGeo::Vec<T,3> randomInHemisphere(const MyGeo::Vec<T,3>& normal)
 {
-    MyGeo::Vec<T,3> inUnitSphere=randomInUnitSphere<T>();
+    MyGeo::Vec<T,3> inUnitSphere=randomUnitVector<T>();//randomInUnitSphere<T>();
     if(inUnitSphere.dot(normal)>0) return inUnitSphere;
     return -inUnitSphere;
 }
